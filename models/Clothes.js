@@ -31,6 +31,13 @@ const clothesSchema = new mongoose.Schema(
       enum: ["Ethnic Wear", "Tops", "Bottom Wear", "Footwear", "Accessories"],
     },
 
+    // Optional: clothes can exist without a folder
+    folderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Folder",
+      default: null,
+    },
+
     type: {
       type: String,
       required: true,

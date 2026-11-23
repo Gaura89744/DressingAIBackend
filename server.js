@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
+import folderRoutes from "./routes/folderRoutes.js";
 import connectDB from "./config/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
@@ -17,6 +17,7 @@ app.use((req, res, next) => {
   console.log("REQUEST:", req.method, req.originalUrl);
   next();
 });
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -26,7 +27,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/clothes", clothesRoutes);
-
+app.use("/api/folders", folderRoutes);
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {

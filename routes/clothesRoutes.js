@@ -4,6 +4,7 @@ import {
   addClothes,
   getClothes,
   getClothesByCategory,
+  getClothesByFolder,
   updateClothes,
   deleteClothes,
 } from "../controllers/clothesController.js";
@@ -20,6 +21,8 @@ router.post("/", upload.single("image"), addClothes);
 router.get("/", getClothes);
 
 router.get("/category/:category", getClothesByCategory);
+
+router.get("/folder/:folderId", getClothesByFolder);
 
 router.put("/:id", upload.single("image"), updateClothes);
 

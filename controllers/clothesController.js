@@ -1,10 +1,12 @@
 import Clothes from "../models/Clothes.js";
+import Folder from "../models/Folder.js";
 import cloudinary from "../config/cloudinary.js";
 
 // ADD CLOTHES
 export const addClothes = async (req, res) => {
   try {
-    const { name, category, type, colour, material, pattern } = req.body;
+    const { name, category, type, colour, material, pattern, folderId } =
+      req.body;
 
     if (!name || !category || !type || !req.file) {
       return res.status(400).json({
@@ -13,12 +15,29 @@ export const addClothes = async (req, res) => {
       });
     }
 
+    // Validate optional folder
+    if (folderId) {
+      const folder = await Folder.findOne({
+        _id: folderId,
+        userId: req.user._id,
+        category,
+      });
+
+      if (!folder) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid folder for this category.",
+        });
+      }
+    }
+
     const clothes = await Clothes.create({
       userId: req.user._id,
       name,
       imageUrl: req.file.path,
       imagePublicId: req.file.filename,
       category,
+      folderId: folderId || null,
       type,
       colour,
       material,
@@ -31,6 +50,8 @@ export const addClothes = async (req, res) => {
       clothes,
     });
   } catch (error) {
+    console.error("ADD CLOTHES ERROR:", error);
+
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -79,6 +100,39 @@ export const getClothesByCategory = async (req, res) => {
   }
 };
 
+// GET CLOTHES BY FOLDER
+export const getClothesByFolder = async (req, res) => {
+  try {
+    const folder = await Folder.findOne({
+      _id: req.params.folderId,
+      userId: req.user._id,
+    });
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        message: "Folder not found.",
+      });
+    }
+
+    const clothes = await Clothes.find({
+      userId: req.user._id,
+      folderId: folder._id,
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: clothes.length,
+      clothes,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // UPDATE CLOTHES
 export const updateClothes = async (req, res) => {
   try {
@@ -109,8 +163,45 @@ export const updateClothes = async (req, res) => {
       }
     }
 
+    // Handle folder assignment or removal
+    if (req.body.folderId !== undefined) {
+      if (req.body.folderId) {
+        const folder = await Folder.findOne({
+          _id: req.body.folderId,
+          userId: req.user._id,
+          category: clothes.category,
+        });
+
+        if (!folder) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid folder for this category.",
+          });
+        }
+
+        clothes.folderId = folder._id;
+      } else {
+        clothes.folderId = null;
+      }
+    }
+
+    // If category changes, the old folder may no longer match
+    if (req.body.category !== undefined && clothes.folderId) {
+      const folder = await Folder.findOne({
+        _id: clothes.folderId,
+        userId: req.user._id,
+        category: clothes.category,
+      });
+
+      if (!folder) {
+        clothes.folderId = null;
+      }
+    }
+
     if (req.file) {
-      await cloudinary.uploader.destroy(clothes.imagePublicId);
+      if (clothes.imagePublicId) {
+        await cloudinary.uploader.destroy(clothes.imagePublicId);
+      }
 
       clothes.imageUrl = req.file.path;
       clothes.imagePublicId = req.file.filename;
@@ -124,6 +215,8 @@ export const updateClothes = async (req, res) => {
       clothes,
     });
   } catch (error) {
+    console.error("UPDATE CLOTHES ERROR:", error);
+
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -146,7 +239,9 @@ export const deleteClothes = async (req, res) => {
       });
     }
 
-    await cloudinary.uploader.destroy(clothes.imagePublicId);
+    if (clothes.imagePublicId) {
+      await cloudinary.uploader.destroy(clothes.imagePublicId);
+    }
 
     await clothes.deleteOne();
 
@@ -155,7 +250,7 @@ export const deleteClothes = async (req, res) => {
       message: "Clothing deleted successfully.",
     });
   } catch (error) {
-    console.error("ADD CLOTHES ERROR:", error);
+    console.error("DELETE CLOTHES ERROR:", error);
 
     return res.status(500).json({
       success: false,
