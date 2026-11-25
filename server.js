@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import folderRoutes from "./routes/folderRoutes.js";
 import connectDB from "./config/db.js";
-
+import shareRoutes from "./routes/shareRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import clothesRoutes from "./routes/clothesRoutes.js";
 
@@ -28,6 +28,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/clothes", clothesRoutes);
 app.use("/api/folders", folderRoutes);
+app.use("/api/shares", shareRoutes);
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
